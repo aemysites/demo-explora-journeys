@@ -1,28 +1,25 @@
 /* global WebImporter */
 export default function parse(element, { document }) {
-  // Find the grid containing the columns
+  // Defensive: find the grid container
   const grid = element.querySelector('.article-content__buttons-grid');
   if (!grid) return;
-  // Get all direct child columns
-  const columns = Array.from(grid.querySelectorAll(':scope > .article-content__buttons-grid-element'));
 
-  // Header row: exactly one cell
+  // Find all immediate button grid elements (columns)
+  const gridElements = Array.from(grid.querySelectorAll(':scope > .article-content__buttons-grid-element'));
+  if (gridElements.length === 0) return;
+
+  // The block header row
   const headerRow = ['Columns (columns18)'];
 
-  // Second row: each column's content
-  const contentRow = columns.map((col) => {
-    // If the column is empty
-    if (!col.hasChildNodes()) return '';
-    // Return all children as a fragment or the only element
-    if (col.childNodes.length === 1) {
-      return col.firstElementChild || col.firstChild;
-    }
-    return Array.from(col.childNodes);
-  });
+  // The columns row: each cell is a button grid element (contains a button or share widget)
+  const columnsRow = gridElements.map((el) => el);
 
-  // The table must have one header cell, even if multiple content columns
-  // Build the table data: [[headerRow], [contentRow]]
-  const tableData = [headerRow, contentRow];
-  const blockTable = WebImporter.DOMUtils.createTable(tableData, document);
-  element.replaceWith(blockTable);
+  // Build the table
+  const table = WebImporter.DOMUtils.createTable([
+    headerRow,
+    columnsRow
+  ], document);
+
+  // Replace the original element with the new table
+  element.replaceWith(table);
 }

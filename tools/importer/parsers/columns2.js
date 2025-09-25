@@ -1,26 +1,31 @@
 /* global WebImporter */
 export default function parse(element, { document }) {
-  // Defensive: Ensure element exists and has content
-  if (!element) return;
-
-  // Find the main grid that contains the columns
+  // Helper: get all direct children columns
   const grid = element.querySelector('.article-content__buttons-grid');
-  if (!grid) return;
+  let columns = [];
+  if (grid) {
+    columns = Array.from(grid.children);
+  } else {
+    // fallback: treat all children as columns
+    columns = Array.from(element.children);
+  }
 
-  // Get direct children columns
-  const columns = Array.from(grid.querySelectorAll(':scope > .article-content__buttons-grid-element'));
-  // If no columns found, fallback to grid itself
-  const dataRow = columns.length > 0 ? columns : [grid];
+  // Defensive: Only keep non-empty columns
+  columns = columns.filter(col => col && (col.textContent.trim() || col.querySelector('a,button')));
 
-  // Correct the header row to be a SINGLE cell with the block name
-  const headerRow = ['Columns (columns2)']; // One cell only
+  // Table header row (block name)
+  const headerRow = ['Columns (columns2)'];
 
-  // Compose cells array: header row (single cell), then data row (multiple cells)
-  const cells = [headerRow, dataRow];
+  // Table content row: each column as a cell
+  // Use the entire column element as the cell content for resilience
+  const contentRow = columns.map(col => col);
 
-  // Create the block table
-  const table = WebImporter.DOMUtils.createTable(cells, document);
+  // Build table
+  const table = WebImporter.DOMUtils.createTable([
+    headerRow,
+    contentRow,
+  ], document);
 
-  // Replace the original element with our new block
+  // Replace original element
   element.replaceWith(table);
 }

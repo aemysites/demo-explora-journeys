@@ -1,26 +1,33 @@
 /* global WebImporter */
 export default function parse(element, { document }) {
-  // Correct header row: single cell, exactly as example
-  const headerRow = ['Columns (columns11)'];
+  // Get all immediate swiper-slide columns
+  const columns = Array.from(
+    element.querySelectorAll('.swiper-wrapper > .swiper-slide, .swiper-wrapper > .b2c-2025-awords__column')
+  );
 
-  // Get the swiper-wrapper containing the actual columns (images)
-  const wrapper = element.querySelector('.b2c-2025-awords__image .swiper-wrapper');
-  let columnElements = [];
-  if (wrapper) {
-    columnElements = Array.from(wrapper.children);
-  }
+  // Defensive: If no columns found, do nothing
+  if (!columns.length) return;
 
-  // Each column contains a picture (the accolade image)
-  const imagesRow = columnElements.map((col) => {
+  // Each column contains a <picture> with an <img>
+  // We'll use the <picture> as the cell content for resilience
+  const row = columns.map(col => {
+    // Find the first <picture> in the column
     const pic = col.querySelector('picture');
-    // Defensive: If the picture is missing, insert an empty string
-    return pic ? pic : '';
+    if (pic) return pic;
+    // Fallback: if no picture, try to find an img
+    const img = col.querySelector('img');
+    if (img) return img;
+    // Fallback: empty cell
+    return '';
   });
 
-  // Build the table: header row is a single column, then one row with all columns
-  const tableCells = [headerRow, imagesRow];
-  const block = WebImporter.DOMUtils.createTable(tableCells, document);
+  // Build table rows
+  const headerRow = ['Columns (columns11)'];
+  const tableRows = [headerRow, row];
 
-  // Replace the original element
+  // Create the block table
+  const block = WebImporter.DOMUtils.createTable(tableRows, document);
+
+  // Replace the original element with the new table
   element.replaceWith(block);
 }

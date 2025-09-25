@@ -1,53 +1,64 @@
 /* global WebImporter */
 export default function parse(element, { document }) {
-  // Table header: must match example exactly
+  // Block header must match exactly
   const headerRow = ['Embed'];
 
-  // We want to include all text, structure, images, and video links from the element
-  // Reference the actual children of the element (not clones)
-  const cellContent = [];
-
-  // Collect all immediate children (structure + text)
-  Array.from(element.childNodes).forEach(node => {
-    if (node.nodeType === Node.ELEMENT_NODE || node.nodeType === Node.TEXT_NODE) {
-      cellContent.push(node);
-    }
-  });
-
-  // Find a video, and add a link to its src at the end of the cell
-  let videoSrc = '';
+  // Find the <video> element
   const video = element.querySelector('video');
+  let videoUrl = '';
+  let posterImg = null;
+
   if (video) {
-    const source = video.querySelector('source[src]');
-    if (source && source.getAttribute('src')) {
-      videoSrc = source.getAttribute('src');
-    } else if (video.getAttribute('src')) {
-      videoSrc = video.getAttribute('src');
+    // Extract the first <source> src attribute
+    const source = video.querySelector('source');
+    if (source && source.src) {
+      videoUrl = source.src;
+    } else if (video.src) {
+      videoUrl = video.src;
+    }
+    // Check for poster attribute
+    if (video.hasAttribute('poster')) {
+      const posterUrl = video.getAttribute('poster');
+      if (posterUrl) {
+        posterImg = document.createElement('img');
+        posterImg.src = posterUrl;
+      }
+    }
+    // If no poster attribute, try to find a visible image inside the element
+    if (!posterImg) {
+      const img = element.querySelector('img');
+      if (img && img.src) {
+        posterImg = img.cloneNode(true);
+      }
     }
   }
 
-  if (videoSrc) {
+  // Compose cell content: poster image (if any), then the link
+  let cellContent = [];
+  if (posterImg) {
+    cellContent.push(posterImg);
+  }
+  if (videoUrl) {
     const link = document.createElement('a');
-    link.href = videoSrc;
-    link.textContent = videoSrc;
-    cellContent.push(document.createElement('br'));
+    link.href = videoUrl;
+    link.textContent = videoUrl;
     cellContent.push(link);
   }
 
-  // Filter out empty text nodes
-  const filteredCellContent = cellContent.filter(node => {
-    return !(node.nodeType === Node.TEXT_NODE && node.textContent.trim() === '');
-  });
+  // If no video found, include all text content from the element
+  if (!videoUrl) {
+    const text = element.textContent.trim();
+    if (text) {
+      cellContent.push(text);
+    }
+  }
 
-  // Ensure at least empty string if nothing present
-  const contentRow = [filteredCellContent.length > 0 ? filteredCellContent : ''];
-
-  // Create block table
-  const table = WebImporter.DOMUtils.createTable([
+  // Table structure: header, then cell with content
+  const tableRows = [
     headerRow,
-    contentRow
-  ], document);
+    [cellContent]
+  ];
 
-  // Replace original element with block table
+  const table = WebImporter.DOMUtils.createTable(tableRows, document);
   element.replaceWith(table);
 }

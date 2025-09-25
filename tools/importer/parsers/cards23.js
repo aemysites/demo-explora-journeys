@@ -1,47 +1,79 @@
 /* global WebImporter */
 export default function parse(element, { document }) {
-  // Prepare header row as required
+  // Helper: Get all immediate card elements
+  const cardSelector = '.swiper-wrapper > .swiper-slide';
+  const cards = element.querySelectorAll(cardSelector);
+
+  // Table header row
   const headerRow = ['Cards (cards23)'];
-  const cells = [headerRow];
+  const rows = [headerRow];
 
-  // Find all swiper-slide card containers (direct, not nested)
-  const swiperSlides = element.querySelectorAll('.swiper-slide.subLevelCarousel__el');
-
-  swiperSlides.forEach((slide) => {
-    // Image: find the <picture> inside the card
-    const imageContainer = slide.querySelector('.six-section-card__img picture');
-    // Info container (title/desc)
-    const info = slide.querySelector('.six-section-card__info');
-    // Defensive: if missing, skip this card
-    if (!imageContainer || !info) return;
-
-    // Title: prefer <p> inside .six-section-card__title, else textContent
-    let titleElem = info.querySelector('.six-section-card__title');
-    let title = null;
-    if (titleElem) {
-      let p = titleElem.querySelector('p');
-      title = p || titleElem;
+  // For each card, extract image and text
+  cards.forEach((card) => {
+    // Image cell: find <picture> or <img>
+    let imgCell = null;
+    const imgWrap = card.querySelector('.six-section-card__img');
+    if (imgWrap) {
+      // Use the <picture> element if present, else fallback to <img>
+      const pic = imgWrap.querySelector('picture');
+      if (pic) {
+        imgCell = pic;
+      } else {
+        const img = imgWrap.querySelector('img');
+        if (img) imgCell = img;
+      }
     }
 
-    // Description: prefer <p> inside .six-section-card__desc, else textContent
-    let descElem = info.querySelector('.six-section-card__desc');
-    let desc = null;
-    if (descElem) {
-      let p = descElem.querySelector('p');
-      desc = p || descElem;
+    // Text cell: title, description, CTA
+    const infoWrap = card.querySelector('.six-section-card__info');
+    const textCellContent = [];
+    if (infoWrap) {
+      // Title
+      const title = infoWrap.querySelector('.six-section-card__title');
+      if (title) {
+        // If <h3> contains a <p>, use its content
+        const p = title.querySelector('p');
+        if (p) {
+          const h = document.createElement('h3');
+          h.innerHTML = p.innerHTML;
+          textCellContent.push(h);
+        } else {
+          textCellContent.push(title);
+        }
+      }
+      // Description
+      const desc = infoWrap.querySelector('.six-section-card__desc');
+      if (desc) {
+        // If <h3> contains a <p>, use its content
+        const p = desc.querySelector('p');
+        if (p) {
+          const d = document.createElement('p');
+          d.innerHTML = p.innerHTML;
+          textCellContent.push(d);
+        } else {
+          textCellContent.push(desc);
+        }
+      }
+      // CTA (if present and has a link)
+      const ctaWrap = infoWrap.querySelector('.six-section-card__cta');
+      if (ctaWrap) {
+        // Look for <a> inside CTA
+        const link = ctaWrap.querySelector('a');
+        if (link) {
+          textCellContent.push(link);
+        }
+      }
     }
 
-    // Compose the text cell: title (if any), then desc (if any)
-    const textCellContents = [];
-    if (title) textCellContents.push(title);
-    if (desc) textCellContents.push(desc);
+    // Defensive: fallback to card if infoWrap missing
+    if (textCellContent.length === 0 && card) {
+      textCellContent.push(card);
+    }
 
-    cells.push([
-      imageContainer,
-      textCellContents
-    ]);
+    rows.push([imgCell, textCellContent]);
   });
 
-  const block = WebImporter.DOMUtils.createTable(cells, document);
+  // Create the block table
+  const block = WebImporter.DOMUtils.createTable(rows, document);
   element.replaceWith(block);
 }

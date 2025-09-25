@@ -1,30 +1,40 @@
 /* global WebImporter */
 export default function parse(element, { document }) {
-  // Header row: one column, block name exactly as specified
+  // Helper to extract the main content from a column
+  function extractColumnContent(column) {
+    const parts = [];
+    // Get image (picture)
+    const media = column.querySelector('.b2c-2025-column-image__media picture');
+    if (media) parts.push(media);
+    // Get title
+    const title = column.querySelector('.b2c-2025-column-image__title');
+    if (title) parts.push(title);
+    // Get subtitle
+    const subtitle = column.querySelector('.b2c-2025-column-image__subtitle');
+    if (subtitle) parts.push(subtitle);
+    // Get button (link)
+    const buttonWrapper = column.querySelector('.b2c-2025-column-image__button a');
+    if (buttonWrapper) parts.push(buttonWrapper);
+    return parts;
+  }
+
+  // Get all columns (immediate children)
+  const columns = Array.from(element.querySelectorAll(':scope > .b2c-2025-activation__column'));
+
+  // Defensive: Only proceed if we have columns
+  if (columns.length === 0) return;
+
+  // Build the table rows
   const headerRow = ['Columns (columns37)'];
+  // Each column's content is an array of elements
+  const contentRow = columns.map(col => extractColumnContent(col));
 
-  // Get all direct column wrapper divs
-  const columns = Array.from(element.querySelectorAll(':scope > div'));
+  // Compose table cells
+  const cells = [headerRow, contentRow];
 
-  // For each column, assemble its content into a single fragment for the cell
-  const contentRow = columns.map(col => {
-    // The image/media section
-    const media = col.querySelector('.b2c-2025-column-image__media');
-    // The text wrapper
-    const textWrapper = col.querySelector('.b2c-2025-column-image__text-wrapper');
+  // Create the block table
+  const block = WebImporter.DOMUtils.createTable(cells, document);
 
-    // Create a container for column content
-    const frag = document.createElement('div');
-    if (media) frag.appendChild(media);
-    if (textWrapper) frag.appendChild(textWrapper);
-    return frag;
-  });
-
-  // Create the table with a single header cell (first row), and a content row with N columns
-  const table = WebImporter.DOMUtils.createTable([
-    headerRow,
-    contentRow,
-  ], document);
-
-  element.replaceWith(table);
+  // Replace the original element
+  element.replaceWith(block);
 }

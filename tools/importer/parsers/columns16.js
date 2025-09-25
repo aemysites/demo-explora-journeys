@@ -1,34 +1,40 @@
 /* global WebImporter */
 export default function parse(element, { document }) {
-  // The structure: .multi-column-cmp > .multiCol > .multiCol__wrap > .body-script > ... > .cmp-container > (columns)
-  // Goal: Each direct child of .cmp-container is a column cell, containing all its content
+  // Find the innermost wrapper containing image columns
+  let contentWrapper = element;
+  while (true) {
+    const divs = Array.from(contentWrapper.children).filter(child => child.tagName === 'DIV');
+    if (divs.some(div => div.classList.contains('imageb2c'))) {
+      contentWrapper = contentWrapper;
+      break;
+    }
+    if (divs.length > 0) {
+      contentWrapper = divs[0];
+    } else {
+      break;
+    }
+  }
 
-  // Find the cmp-container that contains the columns
-  const cmpContainer = element.querySelector('.cmp-container');
-  if (!cmpContainer) return;
+  // Get all imageb2c divs (each is a column)
+  const imageDivs = Array.from(contentWrapper.children).filter(div => div.classList && div.classList.contains('imageb2c'));
 
-  // Each direct child of cmp-container is a column's content block
-  const columnNodes = Array.from(cmpContainer.children);
-
-  // For each column, we want ALL of its contents, not just images
-  // We'll gather all child nodes (including text, images, buttons, etc) for each column
-  const columns = columnNodes.map(col => {
-    // Collect all non-empty child nodes (elements or non-whitespace text)
-    const colContent = Array.from(col.childNodes).filter(n => {
-      return n.nodeType !== Node.TEXT_NODE || n.textContent.trim();
-    });
-    // If there is content, return as array; otherwise fallback to the element itself
-    return colContent.length ? colContent : [col];
+  // Defensive: If no images found, fallback to empty cells
+  const images = imageDivs.map(div => {
+    // Reference the <picture> element directly
+    const picture = div.querySelector('picture');
+    return picture ? picture : document.createElement('div');
   });
-  // If there are no columns, abort
-  if (columns.length === 0) return;
 
-  // Create the table rows: header + one row with as many columns as found
-  const cells = [
-    ['Columns (columns16)'],
-    columns
-  ];
-  const table = WebImporter.DOMUtils.createTable(cells, document);
+  // Table header must match block name exactly
+  const headerRow = ['Columns (columns16)'];
+  // Each image is a column cell
+  const contentRow = images;
+
+  // Build the table
+  const table = WebImporter.DOMUtils.createTable([
+    headerRow,
+    contentRow
+  ], document);
 
   element.replaceWith(table);
 }

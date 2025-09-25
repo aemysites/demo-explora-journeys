@@ -1,46 +1,47 @@
 /* global WebImporter */
 export default function parse(element, { document }) {
-  // Helper to extract direct images from the overlappingImage__images container
-  function getImages(imagesContainer) {
-    const images = [];
-    if (imagesContainer) {
-      const imageDivs = imagesContainer.querySelectorAll(':scope > .overlappingImage__image');
-      imageDivs.forEach((imgDiv) => {
-        const picture = imgDiv.querySelector('picture');
-        if (picture) images.push(picture);
-      });
-    }
-    return images;
+  // Helper: get direct child divs
+  const topDivs = Array.from(element.querySelectorAll(':scope > div'));
+  let mainWrap = element;
+  if (topDivs.length === 1) mainWrap = topDivs[0];
+
+  // Find the main content wrapper
+  const wrap = mainWrap.querySelector('.overlappingImage__wrap') || mainWrap;
+  const imagesContainer = wrap.querySelector('.overlappingImage__images');
+  const infoContainer = wrap.querySelector('.overlappingImage__info');
+
+  // Collect all images (picture elements only, reference them directly)
+  let images = [];
+  if (imagesContainer) {
+    images = Array.from(imagesContainer.querySelectorAll('picture'));
+  }
+  if (images.length === 0) {
+    images = Array.from(mainWrap.querySelectorAll('picture'));
   }
 
-  // Locate the main block elements for columns
-  const overlappingWrap = element.querySelector('.overlappingImage__wrap');
-  const imagesContainer = overlappingWrap && overlappingWrap.querySelector('.overlappingImage__images');
-  const infoContainer = overlappingWrap && overlappingWrap.querySelector('.overlappingImage__info');
+  // Compose left column: images stacked in a div
+  const imagesDiv = document.createElement('div');
+  images.forEach(pic => imagesDiv.appendChild(pic));
 
-  // Prepare left column: all images
-  const leftCol = [];
-  const images = getImages(imagesContainer);
-  if (images.length) leftCol.push(...images);
-
-  // Prepare right column: heading and all paragraphs
-  const rightCol = [];
+  // Compose right column: heading + text
+  let infoContent = [];
   if (infoContainer) {
-    const intro = infoContainer.querySelector('.overlappingImage__intro');
-    if (intro) rightCol.push(intro);
-    const text = infoContainer.querySelector('.overlappingImage__text');
-    if (text) {
-      Array.from(text.children).forEach((child) => {
-        rightCol.push(child);
-      });
-    }
+    const heading = infoContainer.querySelector('h2');
+    if (heading) infoContent.push(heading);
+    const textDiv = infoContainer.querySelector('.overlappingImage__text');
+    if (textDiv) infoContent.push(textDiv);
+  } else {
+    const heading = mainWrap.querySelector('h2');
+    if (heading) infoContent.push(heading);
+    const textDiv = mainWrap.querySelector('div');
+    if (textDiv) infoContent.push(textDiv);
   }
 
-  // Header row must be a single column with only the block name
-  const header = ['Columns (columns32)'];
-  const row = [leftCol, rightCol];
-
-  const cells = [header, row];
+  // Table header must match block name exactly
+  const headerRow = ['Columns (columns32)'];
+  const contentRow = [imagesDiv, infoContent];
+  const cells = [headerRow, contentRow];
   const table = WebImporter.DOMUtils.createTable(cells, document);
+
   element.replaceWith(table);
 }

@@ -1,44 +1,50 @@
 /* global WebImporter */
 export default function parse(element, { document }) {
-  // Header row for the block
-  const cells = [
-    ['Cards (cards12)']
-  ];
-
-  // Collect the image/icon for the card (mandatory, first cell)
-  // Reference the <picture> element directly (it contains the img)
-  const picture = element.querySelector('picture');
-
-  // Collect the text content and CTA for the second cell
-  const info = element.querySelector('.subLevelCarousel__info');
-  
-  // Defensive: ensure text content is handled even if some elements are missing
-  let textContent = document.createElement('div');
-
-  if (info) {
-    // Get the title (may be absent)
-    const titleEl = info.querySelector('.subLevelCarousel__name');
-    if (titleEl) {
-      // bold for heading semantic (as in example)
-      const strong = document.createElement('strong');
-      strong.textContent = titleEl.textContent;
-      textContent.appendChild(strong);
-    }
-    // Get CTA (may be absent)
-    const ctaEl = info.querySelector('.cta-white-btn');
-    if (ctaEl) {
-      if (titleEl) textContent.appendChild(document.createElement('br'));
-      textContent.appendChild(ctaEl);
-    }
+  // Helper to extract the first <img> from a <picture>
+  function getImageFromPicture(picture) {
+    if (!picture) return null;
+    return picture.querySelector('img');
   }
 
-  // Add the card row: [image, text content]
-  cells.push([
-    picture,
-    textContent
-  ]);
+  // Find the main anchor with the image
+  const mainLink = element.querySelector('a');
+  const picture = mainLink ? mainLink.querySelector('picture') : null;
+  const img = getImageFromPicture(picture);
 
-  // Create and replace
-  const block = WebImporter.DOMUtils.createTable(cells, document);
-  element.replaceWith(block);
+  // Find the info section
+  const infoDiv = element.querySelector('.subLevelCarousel__info');
+  let title = null;
+  let cta = null;
+  if (infoDiv) {
+    // Title is the first anchor with class 'subLevelCarousel__name'
+    title = infoDiv.querySelector('.subLevelCarousel__name');
+    // CTA is the anchor with class 'cta-white-btn'
+    cta = infoDiv.querySelector('.cta-white-btn');
+  }
+
+  // Build the text content cell
+  const textContent = document.createElement('div');
+  if (title) {
+    // Use strong for heading style
+    const strong = document.createElement('strong');
+    strong.textContent = title.textContent;
+    textContent.appendChild(strong);
+  }
+  if (cta) {
+    // Add a space if title exists
+    if (title) textContent.appendChild(document.createElement('br'));
+    // Use the existing CTA anchor
+    textContent.appendChild(cta);
+  }
+
+  // Compose the table rows
+  const headerRow = ['Cards (cards12)'];
+  const cardRow = [img, textContent];
+  const rows = [headerRow, cardRow];
+
+  // Create the table
+  const table = WebImporter.DOMUtils.createTable(rows, document);
+
+  // Replace the original element
+  element.replaceWith(table);
 }
