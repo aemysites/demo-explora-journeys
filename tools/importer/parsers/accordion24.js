@@ -1,36 +1,38 @@
 /* global WebImporter */
 export default function parse(element, { document }) {
-  // Compose the header row
-  const cells = [['Accordion (accordion24)']];
-  // Get all immediate child elements of the accordion group
-  const children = Array.from(element.children);
-  let i = 0;
-  while (i < children.length) {
-    const question = children[i];
-    // Only process if this is a question block
-    if (question.classList.contains('faqAcc__question')) {
-      // Try to find corresponding content block (next sibling)
-      let content = null;
-      let j = i + 1;
-      if (j < children.length && children[j].classList.contains('faqAcc__content')) {
-        content = children[j];
-      }
-      // Title cell - reference the existing element
-      const titleCell = question;
-      // Content cell - reference the relevant div, preserving full structure
-      let contentCell;
-      if (content) {
-        // If content contains a child div, use it (it preserves formatting and structure)
-        const innerDiv = content.querySelector('div');
-        contentCell = innerDiv ? innerDiv : content;
-      } else {
-        contentCell = document.createElement('div');
-      }
-      cells.push([titleCell, contentCell]);
-    }
-    i++;
+  // Helper: get direct children by class
+  function getDirectChildrenByClass(parent, className) {
+    return Array.from(parent.children).filter(child => child.classList.contains(className));
   }
-  // Create the table and replace the original element
-  const table = WebImporter.DOMUtils.createTable(cells, document);
+
+  // Get all accordion items: question/content pairs
+  const questions = getDirectChildrenByClass(element, 'faqAcc__question');
+  const contents = getDirectChildrenByClass(element, 'faqAcc__content');
+
+  // Defensive: ensure pairs and handle missing data
+  const items = [];
+  for (let i = 0; i < Math.max(questions.length, contents.length); i++) {
+    const title = questions[i] || document.createTextNode('');
+    let content = contents[i] || document.createTextNode('');
+    // Use inner div if present for content
+    if (content.nodeType === 1 && content.children.length === 1 && content.children[0].tagName === 'DIV') {
+      content = content.children[0];
+    }
+    items.push([title, content]);
+  }
+
+  // Build table rows
+  const rows = [];
+  // Header row: must match block name exactly
+  rows.push(['Accordion (accordion24)']);
+  // Each item as [title, content]
+  items.forEach(([title, content]) => {
+    rows.push([title, content]);
+  });
+
+  // Create table
+  const table = WebImporter.DOMUtils.createTable(rows, document);
+
+  // Replace original element
   element.replaceWith(table);
 }

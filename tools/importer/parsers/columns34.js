@@ -1,41 +1,42 @@
 /* global WebImporter */
 export default function parse(element, { document }) {
-  // Get the main overlapping image wrapper
+  // Helper to get immediate children by selector
+  const getImmediate = (parent, selector) => Array.from(parent.children).filter(el => el.matches(selector));
+
+  // Find the main wrapper for images and info
   const wrap = element.querySelector('.overlappingImage__wrap');
   if (!wrap) return;
 
-  // Prepare left column: title and descriptive text
-  const infoDiv = wrap.querySelector('.overlappingImage__info');
-  let leftContent;
-  if (infoDiv) {
-    leftContent = document.createElement('div');
-    // Retain the order and reference existing elements
-    const intro = infoDiv.querySelector('.overlappingImage__intro');
-    if (intro) leftContent.appendChild(intro);
-    const text = infoDiv.querySelector('.overlappingImage__text');
-    if (text) leftContent.appendChild(text);
-  } else {
-    leftContent = document.createElement('div');
+  // Get images column
+  const imagesContainer = wrap.querySelector('.overlappingImage__images');
+  let images = [];
+  if (imagesContainer) {
+    // Get all picture elements (overlapping images)
+    images = Array.from(imagesContainer.querySelectorAll('picture'));
   }
 
-  // Prepare right column: stacked overlapping images (as existing <picture> elements)
-  const imagesDiv = wrap.querySelector('.overlappingImage__images');
-  let rightContent;
-  if (imagesDiv) {
-    rightContent = document.createElement('div');
-    // Find all .overlappingImage__image > picture elements in order
-    imagesDiv.querySelectorAll('.overlappingImage__image picture').forEach(pic => {
-      rightContent.appendChild(pic);
-    });
-  } else {
-    rightContent = document.createElement('div');
+  // Get info column
+  const infoContainer = wrap.querySelector('.overlappingImage__info');
+  let infoElements = [];
+  if (infoContainer) {
+    // Collect intro and text blocks
+    const intro = infoContainer.querySelector('.overlappingImage__intro');
+    const text = infoContainer.querySelector('.overlappingImage__text');
+    if (intro) infoElements.push(intro);
+    if (text) infoElements.push(text);
   }
 
-  const cells = [
-    ['Columns (columns34)'],
-    [leftContent, rightContent]
-  ];
+  // Compose table rows
+  const headerRow = ['Columns (columns34)'];
+  // First content row: left column is info, right column is images
+  const contentRow = [infoElements, images];
 
-  const table = WebImporter.DOMUtils.createTable(cells, document);
+  // Create the block table
+  const table = WebImporter.DOMUtils.createTable([
+    headerRow,
+    contentRow
+  ], document);
+
+  // Replace the original element
   element.replaceWith(table);
 }

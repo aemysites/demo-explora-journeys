@@ -1,55 +1,69 @@
 /* global WebImporter */
 export default function parse(element, { document }) {
+  // Helper to get immediate child elements
+  function getDirectChildrenByClass(parent, className) {
+    return Array.from(parent.children).filter(child => child.classList.contains(className));
+  }
+
+  // Get all card elements
+  const grid = element.querySelector('.posts-grid__grid');
+  if (!grid) return;
+  const cardElements = getDirectChildrenByClass(grid, 'posts-grid__grid-element');
+
+  // Table header
   const headerRow = ['Cards (cards15)'];
-  const cells = [headerRow];
+  const rows = [headerRow];
 
-  // Get all cards
-  const cardElements = element.querySelectorAll('.posts-grid__grid-element');
-  cardElements.forEach((cardElem) => {
-    // Get the image element (already in the DOM, don't clone)
-    const img = cardElem.querySelector('figure img');
+  // For each card, extract image and text content
+  cardElements.forEach(cardEl => {
+    const article = cardEl.querySelector('article.article-card');
+    if (!article) return;
 
-    // Compose the text column
-    const content = cardElem.querySelector('.article-card__content');
-    const fragments = [];
-
-    // Date (time)
-    const time = content.querySelector('time');
-    if (time && time.textContent.trim()) {
-      const timeP = document.createElement('p');
-      timeP.textContent = time.textContent.trim();
-      fragments.push(timeP);
+    // Image (first cell)
+    let imgEl = article.querySelector('figure img');
+    // Defensive: use the <figure> if no <img> found
+    if (!imgEl) {
+      imgEl = article.querySelector('figure');
     }
 
-    // Title (h4, with its a)
-    const h4 = content.querySelector('h4');
-    if (h4 && h4.textContent.trim()) {
-      fragments.push(h4);
+    // Text content (second cell)
+    const contentDiv = article.querySelector('.article-card__content');
+    if (!contentDiv) return;
+
+    // Compose text cell: time, title, description, CTA
+    const textParts = [];
+
+    // Date
+    const timeEl = contentDiv.querySelector('time.article-card__date');
+    if (timeEl) {
+      textParts.push(timeEl);
     }
 
-    // Description paragraph
-    const desc = content.querySelector('.article-card__excerpt');
-    if (desc && desc.textContent.trim()) {
-      const descP = document.createElement('p');
-      descP.textContent = desc.textContent.trim();
-      fragments.push(descP);
+    // Title (as heading)
+    const h4El = contentDiv.querySelector('h4.article-card__title');
+    if (h4El) {
+      textParts.push(h4El);
     }
 
-    // CTA (See more link)
-    const cta = content.querySelector('a.text-deco--underline');
-    if (cta) {
-      // Only reference the existing anchor, but wrap in <p> for structure
-      const ctaP = document.createElement('p');
-      ctaP.appendChild(cta);
-      fragments.push(ctaP);
+    // Description
+    const descEl = contentDiv.querySelector('p.article-card__excerpt');
+    if (descEl) {
+      textParts.push(descEl);
     }
 
-    // Include only if we have at least a title or description
-    if (img && fragments.length > 0) {
-      cells.push([img, fragments]);
+    // CTA (See more)
+    const ctaEl = contentDiv.querySelector('a.text-deco--underline');
+    if (ctaEl) {
+      textParts.push(ctaEl);
     }
+
+    rows.push([
+      imgEl,
+      textParts
+    ]);
   });
 
-  const table = WebImporter.DOMUtils.createTable(cells, document);
+  // Create and replace
+  const table = WebImporter.DOMUtils.createTable(rows, document);
   element.replaceWith(table);
 }

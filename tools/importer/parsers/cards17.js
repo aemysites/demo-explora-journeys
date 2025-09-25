@@ -1,75 +1,66 @@
 /* global WebImporter */
 export default function parse(element, { document }) {
-  // Helper to add <br> only if needed
-  function addBr(arr) {
-    if (arr.length) arr.push(document.createElement('br'));
-  }
-
+  // Table header row
   const headerRow = ['Cards (cards17)'];
-  const rows = [];
+  const rows = [headerRow];
 
-  // Find the direct grid container (skip any wrapper divs)
-  const grid = element.querySelector(':scope > div');
+  // Defensive: find the grid container
+  const grid = element.querySelector('.posts-grid__grid');
   if (!grid) return;
 
-  // Get all the card elements (immediate children)
-  const cardElements = grid.querySelectorAll(':scope > div.posts-grid__grid-element');
+  // Get all card elements
+  const cardElements = grid.querySelectorAll(':scope > .posts-grid__grid-element');
 
   cardElements.forEach((cardEl) => {
-    // Find the image (figure > a > img)
-    let img = cardEl.querySelector('figure img');
-    // If image is missing, use an empty string for first cell
-    let imgCell = img ? img : '';
+    // Find the article-card inside each grid element
+    const article = cardEl.querySelector('.article-card');
+    if (!article) return;
 
-    // Now build the right cell: title, description, date, CTA
-    const content = cardEl.querySelector('.article-card__content');
-    const cellContent = [];
-
-    // Date (span)
-    const date = content && content.querySelector('.article-card__eyelet');
-    if (date && date.textContent.trim()) {
-      addBr(cellContent);
-      const small = document.createElement('small');
-      small.textContent = date.textContent.trim();
-      cellContent.push(small);
+    // --- Image cell ---
+    let imageEl = null;
+    const figure = article.querySelector('figure');
+    if (figure) {
+      imageEl = figure.querySelector('img');
     }
 
-    // Heading (h4 > a)
-    const heading = content && content.querySelector('h4');
-    if (heading && heading.textContent.trim()) {
-      addBr(cellContent);
-      // Use <strong> for the heading, preserving text
-      const strong = document.createElement('strong');
-      strong.textContent = heading.textContent.trim();
-      cellContent.push(strong);
-    }
-
-    // Description (div.article-card__excerpt)
-    const desc = content && content.querySelector('.article-card__excerpt');
-    if (desc && desc.textContent.trim()) {
-      addBr(cellContent);
-      cellContent.push(document.createTextNode(desc.textContent.trim()));
-    }
-
-    // CTA (a, but not inside heading)
-    let cta;
+    // --- Text cell ---
+    const content = article.querySelector('.article-card__content');
+    const textCellContent = [];
     if (content) {
-      // Find all <a> elements inside .article-card__content
-      const links = Array.from(content.querySelectorAll('a'));
-      // Filter out those that are inside the heading
-      cta = links.find(a => !heading || !heading.contains(a));
-    }
-    if (cta && cta.textContent.trim()) {
-      addBr(cellContent);
-      cellContent.push(cta);
+      // Date (eyelet)
+      const dateSpan = content.querySelector('.article-card__eyelet');
+      if (dateSpan) {
+        // Remove problematic min-height style
+        dateSpan.removeAttribute('style');
+        textCellContent.push(dateSpan);
+      }
+      // Title (h4)
+      const titleH4 = content.querySelector('.article-card__title');
+      if (titleH4) {
+        titleH4.removeAttribute('style');
+        textCellContent.push(titleH4);
+      }
+      // Description (excerpt)
+      const excerptDiv = content.querySelector('.article-card__excerpt');
+      if (excerptDiv) {
+        excerptDiv.removeAttribute('style');
+        textCellContent.push(excerptDiv);
+      }
+      // CTA (Read More link)
+      const ctaLink = content.querySelector('a.text-deco--underline');
+      if (ctaLink) {
+        textCellContent.push(ctaLink);
+      }
     }
 
-    // Build the row: [image cell, right cell]
-    rows.push([imgCell, cellContent]);
+    // Add the row: [image, text content]
+    rows.push([
+      imageEl ? imageEl : '',
+      textCellContent
+    ]);
   });
 
-  // Create the block table
-  const cells = [headerRow, ...rows];
-  const block = WebImporter.DOMUtils.createTable(cells, document);
+  // Create the table block
+  const block = WebImporter.DOMUtils.createTable(rows, document);
   element.replaceWith(block);
 }

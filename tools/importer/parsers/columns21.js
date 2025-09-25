@@ -1,51 +1,43 @@
 /* global WebImporter */
 export default function parse(element, { document }) {
-  // Header row should be a single column, per the example
-  const headerRow = ['Columns (columns21)'];
-
-  // Find the main columns wrapper
+  // Find the main wrapper for the columns
   const wrapper = element.querySelector('.b2c-2025-inclusions__wrapper');
   if (!wrapper) return;
-  // There should be two columns: text and image/media
-  const columns = Array.from(wrapper.children);
+  const columns = wrapper.querySelectorAll(':scope > .b2c-2025-inclusions__column');
   if (columns.length < 2) return;
 
-  // ----- Column 1: Textual Content (reference all content in order) -----
-  const textCol = columns[0];
-  let column1Content = [];
-  Array.from(textCol.children).forEach(child => {
-    if (child.textContent.trim() !== '') {
-      column1Content.push(child);
-    }
-  });
+  // LEFT COLUMN
+  const left = columns[0];
+  const leftContent = [];
+  const title = left.querySelector('.b2c-2025-inclusions__title');
+  if (title) leftContent.push(title);
+  const list = left.querySelector('.b2c-2025-inclusions__list ul');
+  if (list) leftContent.push(list);
+  const disclaimer = left.querySelector('.b2c-2025-inclusions__disclaimer');
+  if (disclaimer) leftContent.push(disclaimer);
 
-  // ----- Column 2: Media Content -----
-  const mediaCol = columns[1];
-  let column2Content = [];
-  const videoEl = mediaCol.querySelector('video');
-  if (videoEl) {
-    const source = videoEl.querySelector('source');
-    let videoSrc = null;
-    if (source && source.getAttribute('src')) {
-      videoSrc = source.getAttribute('src');
-    } else if (videoEl.getAttribute('src')) {
-      videoSrc = videoEl.getAttribute('src');
-    }
-    if (videoSrc) {
-      const link = document.createElement('a');
-      link.href = videoSrc;
-      link.textContent = 'Video';
-      column2Content.push(link);
+  // RIGHT COLUMN
+  const right = columns[1];
+  let rightContent = [];
+  // Prefer image if present, else video
+  const img = right.querySelector('img');
+  if (img) {
+    rightContent = [img];
+  } else {
+    const video = right.querySelector('video');
+    if (video) {
+      // Reference the <video> element directly
+      rightContent = [video];
     }
   }
 
-  // Compose the cells array: header is single cell, second row has two cells
-  const cells = [
+  // Build table
+  const headerRow = ['Columns (columns21)'];
+  const contentRow = [leftContent, rightContent];
+  const table = WebImporter.DOMUtils.createTable([
     headerRow,
-    [column1Content, column2Content]
-  ];
+    contentRow,
+  ], document);
 
-  // Create the table block and replace the original element
-  const table = WebImporter.DOMUtils.createTable(cells, document);
   element.replaceWith(table);
 }

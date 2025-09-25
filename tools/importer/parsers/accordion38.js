@@ -1,35 +1,40 @@
 /* global WebImporter */
 export default function parse(element, { document }) {
-  // Header: use the exact block name as specified
+  // Prepare header row as required
   const headerRow = ['Accordion (accordion38)'];
-
-  // Get all immediate children of the block
-  const children = Array.from(element.querySelectorAll(':scope > *'));
-
   const rows = [headerRow];
-  let i = 0;
-  while (i < children.length) {
-    const item = children[i];
-    if (item.classList.contains('faqAcc__question')) {
-      // Title cell: reference the existing title element
-      const titleEl = item;
-      // Content cell: reference the next sibling content element
-      let contentEl = null;
-      if ((i + 1) < children.length && children[i + 1].classList.contains('faqAcc__content')) {
-        contentEl = children[i + 1];
-      } else {
-        // If content missing, use an empty div to preserve structure
-        contentEl = document.createElement('div');
-      }
-      rows.push([titleEl, contentEl]);
-      i += 2; // Move past both question and content
+
+  // Accordion items are pairs of .faqAcc__question and .faqAcc__content
+  const children = Array.from(element.children);
+  for (let i = 0; i < children.length; i++) {
+    const questionEl = children[i];
+    if (!questionEl.classList.contains('faqAcc__question')) continue;
+    const contentEl = children[i + 1];
+    if (!contentEl || !contentEl.classList.contains('faqAcc__content')) continue;
+
+    // Title cell: use plain text only
+    const titleText = questionEl.textContent.trim();
+
+    // Content cell: use the inner content of the content element
+    let contentCell;
+    const innerDivs = contentEl.querySelectorAll(':scope > div');
+    if (innerDivs.length === 1) {
+      contentCell = Array.from(innerDivs[0].childNodes);
     } else {
-      // If not a question (shouldn't happen), skip
-      i++;
+      contentCell = Array.from(contentEl.childNodes);
     }
+    contentCell = contentCell.filter(node => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        return node.textContent.trim().length > 0;
+      }
+      return true;
+    });
+
+    rows.push([titleText, contentCell]);
+    i++; // Skip the content node in the next loop
   }
 
-  // Create table using referenced elements; no cloning, no markdown, no hardcoded text
+  // Create table and replace element
   const table = WebImporter.DOMUtils.createTable(rows, document);
   element.replaceWith(table);
 }

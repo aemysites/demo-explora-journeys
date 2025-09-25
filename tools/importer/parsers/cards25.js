@@ -1,80 +1,48 @@
 /* global WebImporter */
 export default function parse(element, { document }) {
-  // Create header row: must be a single column with exact text
-  const cells = [['Cards (cards25)']];
-
-  // Extract block intro (title and description)
-  const mainContent = element.querySelector('.carousel-destinations__main_content');
-  let introFragments = [];
-  if (mainContent) {
-    const textContent = mainContent.querySelector('.carousel-destinations__text_content');
-    if (textContent) {
-      // Grab all children (e.g. title, description)
-      Array.from(textContent.children).forEach(child => {
-        if (child.textContent.trim()) introFragments.push(child);
-      });
-    }
-  }
-  // Block intro should be its own row, NOT part of the header
-  if (introFragments.length) {
-    cells.push(['', introFragments.length === 1 ? introFragments[0] : introFragments]);
-  }
-
-  // Extract cards from carousel
+  // Find the carousel slides
   const carousel = element.querySelector('.carousel-destinations__media_carousel');
-  if (carousel) {
-    const slides = carousel.querySelectorAll('.carousel-destinations__media_carousel__slide');
-    slides.forEach(slide => {
-      // IMAGE CELL
-      let imageCell = '';
-      const picture = slide.querySelector('picture');
-      if (picture) {
-        let img = picture.querySelector('img');
-        if (img && (!img.src || img.src === '')) {
-          let src = '';
-          const sources = picture.querySelectorAll('source');
-          for (const source of sources) {
-            const srcset = source.getAttribute('srcset');
-            if (srcset) {
-              src = srcset.split(',')[0].trim();
-              break;
-            }
-          }
-          if (!src && picture.hasAttribute('data-asset')) {
-            src = picture.getAttribute('data-asset');
-          }
-          if (src) img.src = src;
-        }
-        imageCell = picture;
-      }
-      // TEXT CELL
-      let textCellContent = [];
-      const title = slide.querySelector('.carousel-destinations__media_carousel__slide__title');
-      if (title && title.textContent.trim()) {
-        const strong = document.createElement('strong');
-        strong.textContent = title.textContent.trim();
-        textCellContent.push(strong);
-      }
-      // CTA (link)
-      const cardLink = slide.querySelector('a.carousel-destinations__media_carousel__slide__link');
-      if (cardLink && cardLink.href) {
-        const ctaText = cardLink.title ? cardLink.title.trim() : cardLink.textContent.trim();
-        // Only add as CTA if not duplicating the title
-        if (!textCellContent.length || textCellContent[0].textContent !== ctaText) {
-          const cta = document.createElement('a');
-          cta.href = cardLink.href;
-          cta.textContent = ctaText;
-          cta.setAttribute('title', ctaText);
-          textCellContent.push(cta);
-        }
-      }
-      if (textCellContent.length === 0 && slide.textContent.trim()) {
-        textCellContent.push(document.createTextNode(slide.textContent.trim()));
-      }
-      cells.push([imageCell, textCellContent.length === 1 ? textCellContent[0] : textCellContent]);
-    });
-  }
+  if (!carousel) return;
+  const slides = carousel.querySelectorAll('.carousel-destinations__media_carousel__slide');
 
-  const table = WebImporter.DOMUtils.createTable(cells, document);
+  // Table header must match block name exactly
+  const rows = [['Cards (cards25)']];
+
+  slides.forEach(slide => {
+    // Image: reference the <picture> element directly
+    const picture = slide.querySelector('picture');
+    const imageCell = picture || '';
+
+    // Title: get the text from the title div
+    const titleDiv = slide.querySelector('.carousel-destinations__media_carousel__slide__title');
+    let textCell = '';
+    if (titleDiv && titleDiv.textContent.trim()) {
+      const strong = document.createElement('strong');
+      strong.textContent = titleDiv.textContent.trim();
+      textCell = strong;
+    }
+
+    // Try to find description from the main content block (outside the carousel)
+    // We'll use the main description for all cards, as the screenshot shows no per-card description
+    const descriptionDiv = element.querySelector('.carousel-destinations__description');
+    if (descriptionDiv && descriptionDiv.textContent.trim()) {
+      const desc = document.createElement('div');
+      desc.textContent = descriptionDiv.textContent.trim();
+      // If textCell is already an element, append description below
+      if (textCell) {
+        const wrapper = document.createElement('div');
+        wrapper.appendChild(textCell);
+        wrapper.appendChild(desc);
+        textCell = wrapper;
+      } else {
+        textCell = desc;
+      }
+    }
+
+    rows.push([imageCell, textCell]);
+  });
+
+  // Create the table and replace
+  const table = WebImporter.DOMUtils.createTable(rows, document);
   element.replaceWith(table);
 }
