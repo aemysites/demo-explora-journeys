@@ -5,6 +5,7 @@ header .nav-wrapper {
   z-index: 2;
   position: fixed;
   background: rgb(244 242 239) none repeat scroll 0% 0% / auto padding-box border-box;
+  color: #866d4b;
 }
 
 header nav {
@@ -31,7 +32,7 @@ header nav[aria-expanded="true"] {
     display: flex;
     justify-content: space-between;
     gap: 0 32px;
-    max-width: 1264px;
+    max-width: unset;
     padding: 0 32px;
   }
 
@@ -132,13 +133,17 @@ header .nav-brand {
   font-size: var(--heading-font-size-s);
   font-weight: 700;
   line-height: 1;
-}
 
-header nav .nav-brand img {
-  width: auto;
-  height: 100%;
-  max-height: calc(var(--nav-height) - 16px);
-  max-width: 128px;
+  .icon-logo-simple {
+    display: none;
+  }
+
+  img {
+    width: auto;
+    height: 100%;
+    max-height: calc(var(--nav-height) - 16px);
+    max-width: 128px;
+  }
 }
 
 /* sections */
@@ -159,11 +164,11 @@ header nav .nav-sections ul {
   list-style: none;
   padding-left: 0;
   font-size: var(--body-font-size-s);
+  > li {
+    font-weight: 500;
+  }
 }
 
-header nav .nav-sections ul>li {
-  font-weight: 500;
-}
 
 header nav .nav-sections ul>li>ul {
   margin-top: 0;
@@ -182,6 +187,14 @@ header nav .nav-sections ul>li>ul>li {
 
   header nav[aria-expanded="true"] .nav-sections {
     align-self: unset;
+
+     > div > ul > li {
+      > p, > p > a {
+        text-transform: uppercase;
+        font-size: 12px;
+        font-weight: 350;
+      }
+     }
   }
 
   header nav .nav-sections .nav-drop {
@@ -194,7 +207,7 @@ header nav .nav-sections ul>li>ul>li {
     content: "";
     display: inline-block;
     position: absolute;
-    top: 0.5em;
+    top: 0;
     right: 2px;
     transform: rotate(135deg);
     width: 6px;
@@ -206,7 +219,7 @@ header nav .nav-sections ul>li>ul>li {
 
   header nav .nav-sections .nav-drop[aria-expanded="true"]::after {
     top: unset;
-    bottom: 0.5em;
+    bottom: 0em;
     transform: rotate(315deg);
   }
 
@@ -257,4 +270,13 @@ header nav .nav-sections ul>li>ul>li {
 /* tools */
 header nav .nav-tools {
   grid-area: tools;
+
+  ul {
+    /* show each list element side by side */
+    display: flex;
+    gap: 16px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
 }

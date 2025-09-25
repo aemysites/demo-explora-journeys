@@ -28,7 +28,7 @@
   --heading-font-size-m: 39px;
   --heading-font-size-s: 12.45px;
   --heading-font-size-xs: 10.05px;
-  --nav-height: 235px;
+  --nav-height: 95px;
   --header-height: var(--nav-height);
 }
 
@@ -99,7 +99,6 @@
     --heading-font-size-m: 39px;
     --heading-font-size-s: 12.45px;
     --heading-font-size-xs: 10.05px;
-    --nav-height: 235px;
   }
 }
 
@@ -205,16 +204,17 @@ a.button:any-link, button {
   display: inline-block;
   max-width: 100%;
   margin: 12px 0;
-  border: 2px solid transparent;
-  border-radius: 2.4em;
+  border: 1px solid transparent;
+  border-radius: 0.3em;
   padding: 0.5em 1.2em;
   font-family: var(--body-font-family);
   font-style: normal;
+  font-size: 9pt;
   font-weight: 500;
   line-height: 1.25;
   text-align: center;
   text-decoration: none;
-  background-color: var(--link-color);
+  background-color: #222;
   color: var(--background-color);
   cursor: pointer;
   overflow: hidden;
@@ -234,8 +234,8 @@ button:disabled, button:disabled:hover {
 
 a.button.secondary, button.secondary {
   background-color: unset;
-  border: 2px solid currentcolor;
-  color: var(--text-color);
+  border: 1px solid currentcolor;
+  color: #866d4b;
 }
 
 main img {
